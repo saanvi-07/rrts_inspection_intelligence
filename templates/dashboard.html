@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html class="dark" lang="en" style="height: 100vh; width: 100vw; overflow: hidden;">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>IronSight Sentinel - RRTS Infrastructure Inspection Platform</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-primary-container": "#a5d4ff",
+                    "secondary-fixed": "#ffdad5",
+                    "surface-container-highest": "#333538",
+                    "surface-container-high": "#282a2d",
+                    "outline-dim": "#41474e",
+                    "inverse-primary": "#316289",
+                    "secondary": "#ffb4aa",
+                    "on-surface-variant": "#c1c7cf",
+                    "outline": "#8b9199",
+                    "on-primary-fixed-variant": "#124a6f",
+                    "on-error": "#690005",
+                    "surface-tint": "#9ccbf7",
+                    "on-tertiary-container": "#ffc290",
+                    "on-tertiary": "#4c2700",
+                    "on-error-container": "#ffdad6",
+                    "status-active": "#9ccbf7",
+                    "primary-container": "#2a5c82",
+                    "on-secondary": "#690003",
+                    "error": "#ffb4ab",
+                    "tertiary-fixed": "#ffdcc2",
+                    "background": "#111316",
+                    "secondary-fixed-dim": "#ffb4aa",
+                    "primary-fixed": "#cde5ff",
+                    "surface-bright": "#37393d",
+                    "error-container": "#93000a",
+                    "on-secondary-fixed": "#410001",
+                    "surface-container-low": "#1a1c1f",
+                    "primary-fixed-dim": "#9ccbf7",
+                    "tertiary-container": "#864800",
+                    "surface": "#111316",
+                    "tertiary": "#ffb77a",
+                    "on-secondary-container": "#ffd2cc",
+                    "surface-container": "#1e2023",
+                    "status-urgent": "#ff8f00",
+                    "primary": "#9ccbf7",
+                    "on-background": "#e2e2e6",
+                    "surface-dim": "#111316",
+                    "secondary-container": "#c5020b",
+                    "on-tertiary-fixed": "#2e1500",
+                    "on-primary": "#003351",
+                    "inverse-on-surface": "#2f3034",
+                    "outline-variant": "#41474e",
+                    "inverse-surface": "#e2e2e6",
+                    "on-secondary-fixed-variant": "#930005",
+                    "surface-container-lowest": "#0c0e11",
+                    "tertiary-fixed-dim": "#ffb77a",
+                    "surface-variant": "#333538",
+                    "on-primary-fixed": "#001d32",
+                    "on-surface": "#e2e2e6",
+                    "status-critical": "#ff3b30",
+                    "on-tertiary-fixed-variant": "#6d3a00"
+            },
+            "spacing": {
+                    "inset": "16px",
+                    "compact": "8px",
+                    "standard": "12px",
+                    "gutter": "1px",
+                    "unit": "4px"
+            },
+            "fontFamily": {
+                    "label-caps": ["Inter", "sans-serif"],
+                    "display": ["Inter", "sans-serif"],
+                    "code-data": ["JetBrains Mono", "monospace"],
+                    "body-lg": ["Inter", "sans-serif"],
+                    "headline": ["Inter", "sans-serif"],
+                    "body-sm": ["Inter", "sans-serif"]
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+        html, body {
+            height: 100vh;
+            width: 100vw;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #111316;
+        }
+        .material-symbols-outlined {
+            font-family: 'Material Symbols Outlined';
+            font-size: 20px;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .icon-sm { font-size: 14px; }
+        .schematic-grid {
+            background-image: 
+                linear-gradient(to right, rgba(65, 71, 78, 0.1) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(65, 71, 78, 0.1) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+        .sleeper-track {
+            background-image: linear-gradient(to right, #41474e 2px, transparent 2px);
+            background-size: 24px 100%;
+        }
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: #111316; }
+        ::-webkit-scrollbar-thumb { background: #41474e; }
+    </style>
+</head>
+<body class="bg-background text-on-surface h-screen w-screen overflow-hidden flex flex-col font-body-sm antialiased">
+
+<!-- TOP NAV BAR (Fixed 48px) -->
+<nav class="fixed top-0 left-0 w-full h-[48px] bg-surface-container flex items-center justify-between px-standard z-50 border-b border-outline-variant">
+    <div class="flex items-center gap-6 h-full">
+        <span class="font-headline text-headline font-black text-primary tracking-tighter">IRONSIGHT SENTINEL</span>
+        <div class="flex items-center h-full gap-4 ml-8">
+            <div id="line-alpha" class="line-selector h-full flex items-center text-primary border-b-2 border-primary pt-1 cursor-pointer hover:bg-surface-container-highest transition-colors px-2" data-line="LINE_ALPHA">
+                <span class="font-label-caps text-label-caps tracking-widest uppercase">LINE ALPHA</span>
+            </div>
+            <div id="line-bravo" class="line-selector h-full flex items-center text-on-surface-variant cursor-pointer hover:bg-surface-container-highest transition-colors px-2 pt-1" data-line="LINE_BRAVO">
+                <span class="font-label-caps text-label-caps tracking-widest uppercase">LINE BRAVO</span>
+            </div>
+            <div id="line-charlie" class="line-selector h-full flex items-center text-on-surface-variant cursor-pointer hover:bg-surface-container-highest transition-colors px-2 pt-1" data-line="LINE_CHARLIE">
+                <span class="font-label-caps text-label-caps tracking-widest uppercase">LINE CHARLIE</span>
+            </div>
+        </div>
+    </div>
+    <div class="flex items-center gap-4">
+        <div class="flex items-center gap-4 text-on-surface-variant font-code-data text-xs">
+            <span id="nav-robot-id">ROBOT-01</span>
+            <span id="nav-chainage" class="text-primary font-bold">12+435</span>
+            <span id="nav-temp">42.1°C</span>
+            <span id="nav-latency">124ms</span>
+        </div>
+        <button id="btn-toggle-fullscreen" class="bg-surface-container border border-outline-variant hover:bg-surface-container-high p-1 text-on-surface-variant hover:text-primary transition-colors" title="Toggle Mission Control Kiosk Mode">
+            <span class="material-symbols-outlined icon-sm">fullscreen</span>
+        </button>
+        <div id="status-badge" class="bg-status-active/10 border border-status-active text-status-active px-3 py-1 flex items-center gap-2">
+            <div class="w-2 h-2 rounded-full bg-status-active animate-pulse"></div>
+            <span id="status-text" class="font-code-data text-code-data">SYSTEM ACTIVE</span>
+        </div>
+    </div>
+</nav>
+
+<!-- SIDE NAV BAR (Fixed 64px) -->
+<nav class="fixed left-0 top-[48px] w-[64px] h-[calc(100vh-48px)] bg-surface-container border-r border-outline-variant flex flex-col items-center py-standard gap-unit z-40">
+    <div class="flex flex-col gap-2 w-full mt-4">
+        <div class="nav-item w-full flex justify-center py-3 text-primary bg-surface-container-highest border-l-2 border-primary cursor-pointer" title="Overview" data-view="overview">
+            <span class="material-symbols-outlined">dashboard</span>
+        </div>
+        <div class="nav-item w-full flex justify-center py-3 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high cursor-pointer border-l-2 border-transparent" title="Live Feed" data-view="live">
+            <span class="material-symbols-outlined">videocam</span>
+        </div>
+        <div class="nav-item w-full flex justify-center py-3 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high cursor-pointer border-l-2 border-transparent" title="Track Map" data-view="track">
+            <span class="material-symbols-outlined">map</span>
+        </div>
+        <div class="nav-item w-full flex justify-center py-3 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high cursor-pointer border-l-2 border-transparent" title="Defects" data-view="defects">
+            <span class="material-symbols-outlined">report_problem</span>
+        </div>
+        <div class="nav-item w-full flex justify-center py-3 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high cursor-pointer border-l-2 border-transparent" title="Assets" data-view="assets">
+            <span class="material-symbols-outlined">inventory</span>
+        </div>
+        <div class="nav-item w-full flex justify-center py-3 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high cursor-pointer border-l-2 border-transparent" title="Maintenance" data-view="maintenance">
+            <span class="material-symbols-outlined">build</span>
+        </div>
+        <div class="nav-item w-full flex justify-center py-3 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high cursor-pointer border-l-2 border-transparent" title="History" data-view="history">
+            <span class="material-symbols-outlined">history</span>
+        </div>
+    </div>
+</nav>
+
+<!-- MAIN WORKSPACE CONTAINER (Spans 100% minus Top & Side Navs) -->
+<main class="ml-[64px] mt-[48px] h-[calc(100vh-48px)] w-[calc(100vw-64px)] flex bg-background overflow-hidden" id="main-workspace">
+
+    <!-- OVERVIEW VIEW -->
+    <div id="overview-view" class="view-panel w-full flex flex-col h-full">
+        <!-- TOP TRACK SEGMENT & DEFECT ANALYSIS -->
+        <div class="flex-1 flex min-h-0 border-b border-outline-variant">
+            <!-- Left/Center: Track View -->
+            <section class="flex-1 flex flex-col p-standard bg-surface-container-lowest schematic-grid relative border-r border-outline-variant overflow-hidden">
+                <div class="flex justify-between items-center mb-2 z-10">
+                    <div>
+                        <span class="font-label-caps text-label-caps text-on-surface-variant">CURRENT SEGMENT</span>
+                        <h2 id="current-segment-title" class="font-headline text-headline text-on-surface">LINE ALPHA / SECT-04 / 12+000 - 13+000</h2>
+                    </div>
+                    <button id="btn-recenter" class="bg-surface-container px-3 py-1 border border-outline-variant font-code-data text-primary hover:bg-surface-container-high flex items-center gap-1">
+                        <span class="material-symbols-outlined icon-sm">my_location</span> RE-CENTER
+                    </button>
+                </div>
+                
+                <!-- Track Visualizer Canvas -->
+                <div class="flex-1 relative flex items-center justify-center border border-outline-variant rounded bg-surface-container-low overflow-hidden">
+                    <div class="absolute w-full h-[60px] top-1/2 -translate-y-1/2 flex flex-col justify-between py-1 px-8">
+                        <div class="w-full h-0.5 bg-outline-dim"></div>
+                        <div class="w-full h-full sleeper-track opacity-50 absolute left-0 top-0"></div>
+                        <div class="w-full h-0.5 bg-outline-dim"></div>
+                    </div>
+                    <!-- Robot position marker -->
+                    <div id="robot-map-marker" class="absolute left-[65%] top-1/2 -translate-y-1/2 -translate-x-1/2 flex flex-col items-center z-30 transition-all duration-500">
+                        <div class="bg-primary-container text-on-primary-container font-code-data text-code-data px-2 py-0.5 mb-1 border border-primary">
+                            <span id="marker-robot-id">ROBOT-01</span> [<span id="marker-chainage">12+435</span>]
+                        </div>
+                        <div class="w-4 h-4 bg-primary border-2 border-background rounded-full relative">
+                            <div class="absolute inset-0 bg-primary rounded-full animate-ping opacity-50"></div>
+                        </div>
+                    </div>
+                    <!-- Selected Defect Marker -->
+                    <div id="defect-map-marker" class="absolute left-[45%] top-1/2 -translate-y-1/2 -translate-x-1/2 flex flex-col items-center z-20 cursor-pointer">
+                        <div class="w-4 h-4 bg-status-critical rotate-45 border border-background animate-pulse shadow-[0_0_10px_rgba(255,59,48,0.8)]"></div>
+                        <div id="marker-defect-id" class="bg-surface-container border border-status-critical text-status-critical font-code-data text-[10px] px-1 mt-1">
+                            CR-042
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Right: Defect Analysis Panel -->
+            <section class="w-[380px] bg-surface flex flex-col p-standard overflow-y-auto shrink-0">
+                <div class="flex justify-between items-center mb-3 border-b border-outline-variant pb-2">
+                    <div>
+                        <span id="analysis-severity-caps" class="font-label-caps text-status-critical flex items-center gap-1">
+                            <span class="material-symbols-outlined icon-sm">warning</span> CRITICAL DEFECT
+                        </span>
+                        <h2 id="analysis-defect-title" class="font-headline text-headline text-on-surface">Defect Analysis: CR-042</h2>
+                    </div>
+                </div>
+
+                <div class="w-full h-44 bg-surface-container-highest border border-outline-variant mb-3 relative overflow-hidden group">
+                    <img id="analysis-image" class="w-full h-full object-cover contrast-125 brightness-90" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC1yLsVl6DWRBOKfhLDJO5lcQOLUtM7fjEdHyBrbKWx17kbUIqeZafQDd1bLRBPxrmi-EEsFI1614XKfOd0bU9ixbcdYl81Cc470XB1tkjAtxrGSPQh9oexlTV9qlRv8cP232niv4xzY0shIgppiA-tinDV99x_20BrGZ6Ag7AbSBFZVctMJPLewhmK4xnFvYj8OvaOvpsYG_WKQR5NWbYIBVCNIRawQTx-0ascghvRkQC5cXiatVy0"/>
+                    <div class="absolute top-2 right-2 bg-background/80 border border-outline-variant px-2 py-0.5 font-code-data text-[10px] text-primary">
+                        CONF: <span id="analysis-confidence">94.2%</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-px bg-outline-variant border border-outline-variant mb-3 font-code-data text-xs">
+                    <div class="bg-surface-container p-2">
+                        <span class="font-label-caps text-on-surface-variant block">ASSET ID</span>
+                        <span id="analysis-asset-id" class="text-on-surface">PILLAR-B4-2</span>
+                    </div>
+                    <div class="bg-surface-container p-2">
+                        <span class="font-label-caps text-on-surface-variant block">TYPE</span>
+                        <span id="analysis-type" class="text-on-surface truncate">TRANSVERSE_SLEEPER_CRACK</span>
+                    </div>
+                    <div class="bg-surface-container p-2">
+                        <span class="font-label-caps text-on-surface-variant block">SEVERITY</span>
+                        <span id="analysis-severity" class="text-status-critical font-bold">CRITICAL</span>
+                    </div>
+                    <div class="bg-surface-container p-2">
+                        <span class="font-label-caps text-on-surface-variant block">LOCATION</span>
+                        <span id="analysis-location" class="text-primary">12+450 (EB)</span>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <span class="font-label-caps text-on-surface-variant block mb-1">INTERVENTION BASIS</span>
+                    <div id="analysis-severity-basis" class="font-code-data text-[11px] text-status-critical bg-surface-container border-l-2 border-status-critical p-2">
+                        MEASURED_WIDTH_EXCEEDS_2.0MM
+                    </div>
+                </div>
+
+                <p id="analysis-description" class="bg-surface-container-highest border-l-2 border-status-critical p-2 mb-4 font-body-sm text-xs text-on-surface">
+                    New longitudinal crack detected in primary support structure. Pattern recognition indicates potential load-bearing risk requiring immediate engineering review.
+                </p>
+
+                <div class="mt-auto flex gap-2">
+                    <button id="btn-dispatch-maint" class="flex-1 bg-primary-container hover:bg-primary text-on-primary-container hover:text-on-primary font-headline text-xs py-2 px-3 border border-primary flex items-center justify-center gap-1 transition-colors">
+                        <span class="material-symbols-outlined icon-sm">build</span> DISPATCH REPAIR
+                    </button>
+                    <button id="btn-lockdown" class="bg-status-critical text-on-error hover:bg-error-container font-headline text-xs py-2 px-3 flex items-center justify-center gap-1 transition-colors">
+                        <span class="material-symbols-outlined icon-sm">gavel</span> LOCKDOWN
+                    </button>
+                </div>
+            </section>
+        </div>
+
+        <!-- BOTTOM RECENT FINDINGS LOG -->
+        <div class="h-[220px] bg-surface border-t border-outline-variant flex flex-col shrink-0">
+            <div class="px-standard py-1 bg-surface-container flex justify-between items-center border-b border-outline-variant">
+                <span class="font-label-caps text-on-surface-variant">RECENT FINDINGS LOG</span>
+                <span class="font-code-data text-[10px] text-primary">LIVE PIPELINE SYNC</span>
+            </div>
+            <div class="flex-1 overflow-y-auto">
+                <table class="w-full text-left font-code-data text-xs">
+                    <thead class="sticky top-0 bg-surface-container-low text-on-surface-variant border-b border-outline-variant">
+                        <tr>
+                            <th class="p-2 font-normal">TIME</th>
+                            <th class="p-2 font-normal">ID</th>
+                            <th class="p-2 font-normal">LOCATION</th>
+                            <th class="p-2 font-normal">DESCRIPTION</th>
+                            <th class="p-2 font-normal">CONFIDENCE</th>
+                            <th class="p-2 font-normal">SEVERITY</th>
+                        </tr>
+                    </thead>
+                    <tbody id="findings-table-body" class="divide-y divide-outline-variant/30">
+                        <!-- Dynamic Rows -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- OTHER VIEWS (Live, Track, Defects, Assets, Maintenance, History) -->
+    <div id="live-view" class="view-panel w-full hidden p-standard bg-background overflow-hidden">
+        <h2 class="font-headline text-headline text-primary mb-4">LIVE ROBOT FEED & OPTICAL SCAN</h2>
+        <div class="w-full h-96 bg-black border border-outline-variant relative flex items-center justify-center">
+            <img class="w-full h-full object-cover opacity-80" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCQZKLysXPn-mTRBpZH20P-o6GFJDQ8QJ31K4jnYuggcL5yzc8E89h90MiN3ts0o7bl7jaAJb1mMiWWZV5wenxkrUdjys6PrhO87z0axdkZjtamTzIbZws_M55H_zaYuhW5txw406nPS6sipOf7mycX73JdZdpWE_p7izEgvYsWUcIcztjWMj7JbEhy7F_NXNEUNQ_ZHDDIo-ql2Ipu1mjqC4MnNDLqiw3yxlAFMO7NdC7kIQoEX9xc"/>
+            <div class="absolute top-4 left-4 bg-background/80 border border-primary p-2 font-code-data text-xs text-primary">
+                CAM_01 // FORWARD OPTIC<br/>SYS.TEMP: <span id="live-feed-temp">42.1°C</span><br/>SPEED: <span id="live-feed-speed">0.85 m/s</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="defects-view" class="view-panel w-full hidden p-standard overflow-y-auto">
+        <h2 class="font-headline text-headline text-primary mb-4">TRIAGE QUEUE & DEFECT DIRECTORY</h2>
+        <div id="defects-cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-standard"></div>
+    </div>
+
+    <div id="maintenance-view" class="view-panel w-full hidden p-standard overflow-y-auto">
+        <h2 class="font-headline text-headline text-primary mb-4">MAINTENANCE ACTION QUEUE & WORK ORDERS</h2>
+        <div id="work-orders-container" class="grid grid-cols-1 md:grid-cols-2 gap-standard"></div>
+    </div>
+
+    <div id="history-view" class="view-panel w-full hidden p-standard overflow-y-auto">
+        <h2 class="font-headline text-headline text-primary mb-4">HISTORICAL INSPECTION RUNS</h2>
+        <div id="runs-container" class="grid grid-cols-1 md:grid-cols-2 gap-standard"></div>
+    </div>
+
+    <div id="track-view" class="view-panel w-full hidden p-standard">
+        <h2 class="font-headline text-headline text-primary mb-4">TRACK SCHEMATIC MAP</h2>
+        <div class="w-full h-80 bg-surface-container border border-outline-variant flex items-center justify-center font-code-data text-on-surface-variant">
+            [Schematic Layout for Line Alpha / Sector 4]
+        </div>
+    </div>
+
+    <div id="assets-view" class="view-panel w-full hidden p-standard">
+        <h2 class="font-headline text-headline text-primary mb-4">ASSET DIRECTORY</h2>
+        <div id="assets-tree-container" class="font-code-data text-sm bg-surface-container border border-outline-variant p-standard"></div>
+    </div>
+
+</main>
+
+<script>
+// ==================== DASHBOARD CLIENT ENGINE ====================
+const State = {
+    defects: [],
+    telemetry: {},
+    selectedDefect: null,
+    seenEvents: new Set()
+};
+
+async function initDashboard() {
+    console.log("⚡ Initializing Connected RRTS Mission Control Dashboard...");
+    setupNavigation();
+    setupFullscreenToggle();
+    await fetchInitialData();
+    connectSSE();
+}
+
+function setupFullscreenToggle() {
+    const btn = document.getElementById('btn-toggle-fullscreen');
+    if (btn) {
+        btn.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => console.log(err));
+            } else {
+                document.exitFullscreen().catch(err => console.log(err));
+            }
+        });
+    }
+}
+
+function setupNavigation() {
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+            const view = e.currentTarget.dataset.view;
+            document.querySelectorAll('.view-panel').forEach(p => p.classList.add('hidden'));
+            const targetView = document.getElementById(`${view}-view`);
+            if (targetView) targetView.classList.remove('hidden');
+
+            document.querySelectorAll('.nav-item').forEach(n => {
+                n.classList.remove('text-primary', 'bg-surface-container-highest', 'border-l-primary');
+                n.classList.add('text-on-surface-variant', 'border-l-transparent');
+            });
+            e.currentTarget.classList.remove('text-on-surface-variant', 'border-l-transparent');
+            e.currentTarget.classList.add('text-primary', 'bg-surface-container-highest');
+            e.currentTarget.style.borderLeft = '2px solid #9ccbf7';
+        });
+    });
+
+    document.getElementById('btn-dispatch-maint').addEventListener('click', async () => {
+        if (!State.selectedDefect) return;
+        alert(`Dispatched maintenance repair for defect: ${State.selectedDefect.defect_id}`);
+    });
+
+    document.getElementById('btn-lockdown').addEventListener('click', async () => {
+        if (!State.selectedDefect) return;
+        await fetch('/api/v1/work-orders/action', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({action: 'LOCKDOWN', wo_id: 'WO-9942'})
+        });
+        alert('Emergency Lockdown initiated for Zone 4.');
+    });
+}
+
+async function fetchInitialData() {
+    try {
+        const [telemRes, defectsRes, woRes, assetsRes, runsRes] = await Promise.all([
+            fetch('/api/v1/telemetry'),
+            fetch('/api/v1/defects'),
+            fetch('/api/v1/work-orders'),
+            fetch('/api/v1/assets'),
+            fetch('/api/v1/runs')
+        ]);
+
+        State.telemetry = await telemRes.json();
+        State.defects = await defectsRes.json();
+        const workOrders = await woRes.json();
+        const assets = await assetsRes.json();
+        const runs = await runsRes.json();
+
+        updateTelemetryUI(State.telemetry);
+        renderDefectsTable(State.defects);
+        renderDefectsCards(State.defects);
+        renderWorkOrders(workOrders);
+        renderAssetsTree(assets);
+        renderRuns(runs);
+
+        if (State.defects.length > 0) {
+            selectDefect(State.defects[0]);
+        }
+    } catch (err) {
+        console.error("Failed to load initial REST data:", err);
+    }
+}
+
+function updateTelemetryUI(t) {
+    document.getElementById('nav-robot-id').innerText = t.robot_id || 'ROBOT-01';
+    document.getElementById('nav-chainage').innerText = t.chainage || '12+435';
+    document.getElementById('nav-temp').innerText = `${t.sys_temp_c || 42.1}°C`;
+    document.getElementById('nav-latency').innerText = `${t.telemetry_latency_ms || 124}ms`;
+    document.getElementById('marker-chainage').innerText = t.chainage || '12+435';
+    document.getElementById('live-feed-temp').innerText = `${t.sys_temp_c || 42.1}°C`;
+    document.getElementById('live-feed-speed').innerText = `${t.speed_ms || 0.85} m/s`;
+}
+
+function renderDefectsTable(defects) {
+    const tbody = document.getElementById('findings-table-body');
+    tbody.innerHTML = defects.map(d => {
+        const def = d.defect || {};
+        const conf = def.confidence || d.confidence || 0.94;
+        const sev = def.severity || d.severity || 'CRITICAL';
+        const typeStr = def.defect_type || d.type || 'TRANSVERSE_SLEEPER_CRACK';
+        return `
+            <tr class="hover:bg-surface-container-highest cursor-pointer border-b border-outline-variant/30" onclick='selectDefectById("${d.defect_id}")'>
+                <td class="p-2 text-on-surface-variant">${d.timestamp ? d.timestamp.substring(11,19) : '14:22:05'}</td>
+                <td class="p-2 text-primary font-bold">${d.defect_id}</td>
+                <td class="p-2 text-on-surface">${d.chainage || (d.location ? d.location.chainage_str : '12+450')}</td>
+                <td class="p-2 text-on-surface truncate max-w-[200px]">${typeStr}</td>
+                <td class="p-2 text-on-surface">${(conf * 100).toFixed(1)}%</td>
+                <td class="p-2">
+                    <span class="${sev === 'CRITICAL' ? 'text-status-critical bg-status-critical/10 border-status-critical' : 'text-status-urgent bg-status-urgent/10 border-status-urgent'} px-1 py-0.5 border rounded-sm font-bold">
+                        ${sev}
+                    </span>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function selectDefectById(defectId) {
+    const d = State.defects.find(x => x.defect_id === defectId);
+    if (d) selectDefect(d);
+}
+
+function selectDefect(d) {
+    State.selectedDefect = d;
+    const def = d.defect || {};
+    const asset = d.asset || {};
+    const loc = d.location || {};
+
+    const sev = def.severity || d.severity || 'CRITICAL';
+    const typeStr = def.defect_type || d.type || 'TRANSVERSE_SLEEPER_CRACK';
+    const conf = def.confidence || d.confidence || 0.942;
+    const basis = def.severity_basis ? def.severity_basis.join(', ') : 'MEASURED_LIMIT_EXCEEDED';
+
+    document.getElementById('analysis-defect-title').innerText = `Defect Analysis: ${d.defect_id}`;
+    document.getElementById('analysis-asset-id').innerText = asset.asset_id || d.asset_id || 'PILLAR-B4-2';
+    document.getElementById('analysis-type').innerText = typeStr;
+    document.getElementById('analysis-severity').innerText = sev;
+    document.getElementById('analysis-severity-caps').innerText = `${sev} DEFECT`;
+    document.getElementById('analysis-severity-basis').innerText = basis;
+    document.getElementById('analysis-location').innerText = loc.chainage_str || d.chainage || '12+450';
+    document.getElementById('analysis-confidence').innerText = `${(conf * 100).toFixed(1)}%`;
+    document.getElementById('analysis-description').innerText = d.description || 'Inspection finding evaluated against RRTS intervention limits.';
+    
+    if (d.evidence && d.evidence.image_url) {
+        document.getElementById('analysis-image').src = d.evidence.image_url;
+    } else if (d.optical_image_url) {
+        document.getElementById('analysis-image').src = d.optical_image_url;
+    }
+    
+    document.getElementById('marker-defect-id').innerText = d.defect_id;
+}
+
+function renderDefectsCards(defects) {
+    const container = document.getElementById('defects-cards-container');
+    container.innerHTML = defects.map(d => {
+        const def = d.defect || {};
+        const sev = def.severity || d.severity || 'CRITICAL';
+        return `
+            <div class="bg-surface-container border border-outline-variant p-standard">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="font-code-data text-primary font-bold">${d.defect_id}</span>
+                    <span class="px-2 py-0.5 border text-xs font-bold ${sev === 'CRITICAL' ? 'border-status-critical text-status-critical' : 'border-status-urgent text-status-urgent'}">${sev}</span>
+                </div>
+                <h3 class="font-headline text-sm font-semibold mb-1">${def.defect_type || d.type}</h3>
+                <p class="text-xs text-on-surface-variant mb-2">${d.description}</p>
+                <div class="text-xs font-code-data text-primary">${d.chainage || '12+450'}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderWorkOrders(orders) {
+    const container = document.getElementById('work-orders-container');
+    container.innerHTML = orders.map(wo => `
+        <div class="bg-surface-container border border-outline-variant p-standard">
+            <div class="flex justify-between items-start mb-2">
+                <span class="font-code-data text-status-critical font-bold">${wo.wo_id}</span>
+                <span class="px-2 py-0.5 border border-status-urgent text-status-urgent text-xs">${wo.status}</span>
+            </div>
+            <h3 class="font-headline text-sm font-semibold mb-1">${wo.title}</h3>
+            <p class="text-xs text-on-surface-variant mb-2">${wo.location}</p>
+            <div class="text-xs font-code-data text-status-urgent mb-2">${wo.isolation_status}</div>
+            <div class="text-xs text-on-surface-variant border-t border-outline-variant pt-2">
+                Crew: ${wo.assigned_crew}
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderAssetsTree(assets) {
+    const container = document.getElementById('assets-tree-container');
+    if (!assets.tree) return;
+    container.innerHTML = assets.tree.map(cat => `
+        <div class="mb-3">
+            <div class="font-bold text-primary mb-1">▶ ${cat.label}</div>
+            <div class="ml-4 flex flex-col gap-1">
+                ${cat.children.map(ch => `<div class="text-on-surface">▫ ${ch.label} [<span class="text-status-active">${ch.status}</span>]</div>`).join('')}
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderRuns(runs) {
+    const container = document.getElementById('runs-container');
+    container.innerHTML = runs.map(r => `
+        <div class="bg-surface-container border border-outline-variant p-standard">
+            <div class="flex justify-between items-center mb-1">
+                <span class="font-code-data text-primary font-bold">${r.label}</span>
+                <span class="text-xs font-code-data text-on-surface-variant">${r.date}</span>
+            </div>
+            <div class="text-xs text-on-surface">Anomalies: ${r.anomalies}</div>
+        </div>
+    `).join('');
+}
+
+function connectSSE() {
+    const eventSource = new EventSource('/api/v1/inspection-events');
+
+    eventSource.onmessage = (e) => {
+        try {
+            const eventPayload = JSON.parse(e.data);
+            if (State.seenEvents.has(eventPayload.event_id)) return;
+            State.seenEvents.add(eventPayload.event_id);
+
+            if (eventPayload.event_type === 'robot.position.updated') {
+                State.telemetry = eventPayload.data;
+                updateTelemetryUI(State.telemetry);
+            } else if (eventPayload.event_type === 'inspection.defect.detected') {
+                const newDefect = eventPayload.data;
+                State.defects.unshift(newDefect);
+                renderDefectsTable(State.defects);
+                renderDefectsCards(State.defects);
+                selectDefect(newDefect);
+            }
+        } catch (err) {
+            console.error("Error parsing SSE payload:", err);
+        }
+    };
+
+    eventSource.onerror = () => {
+        console.warn("SSE connection lost. Reconnecting...");
+    };
+}
+
+document.addEventListener('DOMContentLoaded', initDashboard);
+</script>
+</body>
+</html>
