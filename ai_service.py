@@ -5,18 +5,22 @@ import json
 import random
 import logging
 from datetime import datetime, timezone
+from pathlib import Path
 import requests
 from fastapi import FastAPI, Request, HTTPException
 from typing import Optional, List, Dict, Any
 
-sys.path.insert(0, "/working_dir/rrts_sensor_pipeline")
+BASE_DIR = Path(__file__).resolve().parent
+SENSOR_PIPELINE_PATH = BASE_DIR / "rrts_sensor_pipeline"
+if str(SENSOR_PIPELINE_PATH) not in sys.path:
+    sys.path.insert(0, str(SENSOR_PIPELINE_PATH))
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] [AIService] %(message)s")
 logger = logging.getLogger("AIService")
 
 app = FastAPI(title="RRTS AI Perception & Measurement Engine", version="3.2.1")
 
-BACKEND_FINDINGS_URL = "http://127.0.0.1:8000/api/v1/inspection/findings"
+BACKEND_FINDINGS_URL = os.getenv("BACKEND_FINDINGS_URL", "http://127.0.0.1:8000/api/v1/inspection/findings")
 
 def evaluate_defect_severity(defect_type: str, measurements: Dict[str, float], thermal_peak_c: float = 40.0) -> tuple[str, list[str]]:
     """
@@ -214,4 +218,6 @@ async def process_frame_legacy(payload: Dict[str, Any]):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8001)
+    host = os.getenv("HOST", "0.0.0.0")
+    port = int(os.getenv("PORT", 8001))
+    uvicorn.run(app, host=host, port=port)
