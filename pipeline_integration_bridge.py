@@ -1,10 +1,15 @@
 import sys
+import os
 import asyncio
 import logging
 import requests
 import json
+from pathlib import Path
 
-sys.path.insert(0, "/working_dir/rrts_sensor_pipeline")
+BASE_DIR = Path(__file__).resolve().parent
+SENSOR_PIPELINE_PATH = BASE_DIR / "rrts_sensor_pipeline"
+if str(SENSOR_PIPELINE_PATH) not in sys.path:
+    sys.path.insert(0, str(SENSOR_PIPELINE_PATH))
 
 from schemas import PipelineStatus, SensorType
 from test_sensor_publisher import (
@@ -19,8 +24,8 @@ from ai_adapter import AIInputAdapter
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] [PipelineBridge] %(message)s")
 logger = logging.getLogger("PipelineBridge")
 
-AI_SERVICE_URL = "http://127.0.0.1:8001/api/v1/ai/process-package"
-BACKEND_TELEMETRY_URL = "http://127.0.0.1:8000/api/v1/ingest/telemetry"
+AI_SERVICE_URL = os.getenv("AI_SERVICE_URL", "http://127.0.0.1:8001/api/v1/ai/process-package")
+BACKEND_TELEMETRY_URL = os.getenv("BACKEND_TELEMETRY_URL", "http://127.0.0.1:8000/api/v1/ingest/telemetry")
 
 async def _consume_sensor_bus(bus: TopicBus, topic: str, quality_gate: QualityGate, sync_engine: SyncEngine):
     while True:
