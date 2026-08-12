@@ -1,7 +1,9 @@
 import asyncio
 import json
 import logging
+import os
 import random
+from pathlib import Path
 from typing import Dict, List, Any, Optional, Set
 from datetime import datetime, timezone
 
@@ -11,6 +13,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] [Backend] %(message)s")
+
+BASE_DIR = Path(__file__).resolve().parent
+TEMPLATE_PATH = BASE_DIR / "templates" / "dashboard.html"
 
 app = FastAPI(
     title="RRTS IronSight Sentinel Operational Backend Platform",
@@ -412,9 +417,12 @@ async def get_assets():
 @app.get("/", response_class=HTMLResponse)
 @app.get("/dashboard", response_class=HTMLResponse)
 async def serve_dashboard():
-    with open("/working_dir/rrts_sentinel/templates/dashboard.html", "r", encoding="utf-8") as f:
-        return f.read()
+    if not TEMPLATE_PATH.exists():
+        raise HTTPException(status_code=500, detail=f"Dashboard template missing at {TEMPLATE_PATH}")
+    return HTMLResponse(content=TEMPLATE_PATH.read_text(encoding="utf-8"))
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    host = os.getenv("HOST", "0.0.0.0")
+    port = int(os.getenv("PORT", 8000))
+    uvicorn.run(app, host=host, port=port)
