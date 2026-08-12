@@ -1,15 +1,20 @@
 import sys
+import os
 import time
 import requests
 import logging
 import threading
+from pathlib import Path
 
-sys.path.insert(0, "/working_dir/rrts_sensor_pipeline")
+BASE_DIR = Path(__file__).resolve().parent
+SENSOR_PIPELINE_PATH = BASE_DIR / "rrts_sensor_pipeline"
+if str(SENSOR_PIPELINE_PATH) not in sys.path:
+    sys.path.insert(0, str(SENSOR_PIPELINE_PATH))
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] [TestSystem] %(message)s")
 
-BACKEND_URL = "http://127.0.0.1:8000"
-AI_URL = "http://127.0.0.1:8001"
+BACKEND_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:8000")
+AI_URL = os.getenv("AI_URL", "http://127.0.0.1:8001")
 
 def test_backend_rest_and_health():
     logging.info("--- Step 1 & 7: Testing Backend Health & REST Endpoints ---")
