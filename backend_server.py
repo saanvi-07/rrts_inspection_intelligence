@@ -15,7 +15,6 @@ from pydantic import BaseModel, Field
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] [Backend] %(message)s")
 
 BASE_DIR = Path(__file__).resolve().parent
-TEMPLATE_PATH = BASE_DIR / "templates" / "dashboard.html"
 
 app = FastAPI(
     title="RRTS IronSight Sentinel Operational Backend Platform",
@@ -414,12 +413,41 @@ async def get_assets():
         ]
     }
 
+# ==================== DASHBOARD TEMPLATE LOADER ====================
+def _load_dashboard_html() -> str:
+    possible_paths = [
+        BASE_DIR / "templates" / "dashboard.html",
+        BASE_DIR / "dashboard.html",
+        Path.cwd() / "templates" / "dashboard.html",
+        Path.cwd() / "dashboard.html",
+        Path("/var/task/templates/dashboard.html"),
+        Path("/var/task/dashboard.html"),
+    ]
+    for path in possible_paths:
+        if path.exists() and path.is_file():
+            try:
+                return path.read_text(encoding="utf-8")
+            except Exception as e:
+                logging.warning(f"Failed to read template from {path}: {e}")
+                
+    # Fallback to prevent 500 error if template file is excluded in Vercel bundle
+    return """<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+    <meta charset="utf-8"/><title>IronSight Sentinel - RRTS Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen flex flex-col items-center justify-center p-6 text-center">
+    <h1 class="text-3xl font-bold text-blue-400 mb-2">RRTS IronSight Sentinel Platform</h1>
+    <p class="text-gray-300 max-w-lg mb-6">Backend is online and serving live telemetry. Ensure <code class="bg-gray-800 px-2 py-1 rounded text-pink-400">templates/dashboard.html</code> is included in deployment bundle.</p>
+    <a href="/api/v1/health" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded font-mono text-sm">Check System Health API</a>
+</body>
+</html>"""
+
 @app.get("/", response_class=HTMLResponse)
 @app.get("/dashboard", response_class=HTMLResponse)
 async def serve_dashboard():
-    if not TEMPLATE_PATH.exists():
-        raise HTTPException(status_code=500, detail=f"Dashboard template missing at {TEMPLATE_PATH}")
-    return HTMLResponse(content=TEMPLATE_PATH.read_text(encoding="utf-8"))
+    return HTMLResponse(content=_load_dashboard_html())
 
 if __name__ == "__main__":
     import uvicorn
