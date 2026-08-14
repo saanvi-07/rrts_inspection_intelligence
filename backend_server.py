@@ -10,7 +10,6 @@ from datetime import datetime, timezone
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, HTTPException, Query, Header
 from fastapi.responses import StreamingResponse, HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] [Backend] %(message)s")
 
@@ -126,11 +125,7 @@ class OperationalDataStore:
                 "isolation_status": "LOTO Required - Zone 4",
                 "risk_level": "HIGH",
                 "assigned_crew": "Team Delta (Eng. Smith)",
-                "created_time": "T-2H",
-                "workflow_notes": [
-                    {"time": "08:00Z", "text": "Auto-Created from AI Defect Detection"},
-                    {"time": "08:15Z", "text": "Commencing LOTO protocol on Main Relay. Awaiting secondary approval. - J. Smith"}
-                ]
+                "created_time": "T-2H"
             }
         ]
 
@@ -213,9 +208,7 @@ async def get_system_health():
 async def ingest_structured_finding(payload: Dict[str, Any], authorization: Optional[str] = Header(None)):
     event_id = payload.get("event_id", f"evt_{datetime.now().timestamp()}")
     
-    # Idempotency Check
     if event_id in db.idempotency_cache:
-        logging.info(f"Duplicate finding received with event_id {event_id}. Returning cached response.")
         return JSONResponse(status_code=200, content=db.idempotency_cache[event_id])
 
     finding_id = f"fnd_{random.randint(10000000, 99999999)}"
@@ -276,7 +269,7 @@ async def ingest_structured_finding(payload: Dict[str, Any], authorization: Opti
         },
         "type": defect_type,
         "chainage": chainage_str,
-        "description": f"AI Detected {defect_type} @ {chainage_str} with {defect_data.get('confidence', 0.94)*100:.1f}% confidence. Basis: {defect_data.get('severity_basis', ['MEASURED_LIMIT'])}",
+        "description": f"AI Detected {defect_type} @ {chainage_str}",
         "status": "OPEN",
         "review_status": "PENDING_REVIEW"
     }
@@ -355,27 +348,6 @@ async def sse_inspection_events(request: Request, last_event_id: Optional[str] =
         headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"}
     )
 
-@app.websocket("/ws/inspection-events")
-async def websocket_inspection_events(websocket: WebSocket):
-    await websocket.accept()
-    db.websocket_connections.add(websocket)
-    try:
-        await websocket.send_json({
-            "event_type": "system.connected",
-            "message": "Connected to RRTS Kiosk Mission Control Pipeline",
-            "telemetry": db.telemetry
-        })
-        while True:
-            data = await websocket.receive_json()
-            cmd_type = data.get("command")
-            if cmd_type == "TOGGLE_KIOSK":
-                db.kiosk_mode_enabled = not db.kiosk_mode_enabled
-                await websocket.send_json({"event_type": "kiosk.toggled", "enabled": db.kiosk_mode_enabled})
-    except WebSocketDisconnect:
-        db.websocket_connections.discard(websocket)
-    except Exception as exc:
-        db.websocket_connections.discard(websocket)
-
 # ==================== REST APIS ====================
 @app.get("/api/v1/telemetry")
 async def get_telemetry():
@@ -386,16 +358,7 @@ async def get_runs():
     return db.runs
 
 @app.get("/api/v1/defects")
-async def get_defects(after_id: Optional[str] = None):
-    if after_id:
-        found = False
-        res = []
-        for d in db.defects:
-            if found:
-                res.append(d)
-            elif d.get("event_id") == after_id or d.get("defect_id") == after_id or d.get("finding_id") == after_id:
-                found = True
-        return res
+async def get_defects():
     return db.defects
 
 @app.get("/api/v1/work-orders")
@@ -415,32 +378,83 @@ async def get_assets():
 
 # ==================== DASHBOARD TEMPLATE LOADER ====================
 def _load_dashboard_html() -> str:
-    possible_paths = [
+    template_candidates = [
         BASE_DIR / "templates" / "dashboard.html",
         BASE_DIR / "dashboard.html",
         Path.cwd() / "templates" / "dashboard.html",
-        Path.cwd() / "dashboard.html",
         Path("/var/task/templates/dashboard.html"),
-        Path("/var/task/dashboard.html"),
     ]
-    for path in possible_paths:
+    for path in template_candidates:
         if path.exists() and path.is_file():
             try:
                 return path.read_text(encoding="utf-8")
-            except Exception as e:
-                logging.warning(f"Failed to read template from {path}: {e}")
-                
-    # Fallback to prevent 500 error if template file is excluded in Vercel bundle
+            except Exception:
+                pass
+
+    # Built-in robust HTML Control Room interface
     return """<!DOCTYPE html>
-<html class="dark" lang="en">
+<html class="dark" lang="en" style="height: 100vh; width: 100vw; overflow: hidden;">
 <head>
-    <meta charset="utf-8"/><title>IronSight Sentinel - RRTS Platform</title>
+    <meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>IronSight Sentinel - RRTS Platform</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-900 text-white min-h-screen flex flex-col items-center justify-center p-6 text-center">
-    <h1 class="text-3xl font-bold text-blue-400 mb-2">RRTS IronSight Sentinel Platform</h1>
-    <p class="text-gray-300 max-w-lg mb-6">Backend is online and serving live telemetry. Ensure <code class="bg-gray-800 px-2 py-1 rounded text-pink-400">templates/dashboard.html</code> is included in deployment bundle.</p>
-    <a href="/api/v1/health" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded font-mono text-sm">Check System Health API</a>
+<body class="bg-[#111316] text-[#e2e2e6] h-screen w-screen overflow-hidden flex flex-col font-mono antialiased">
+<nav class="w-full h-[48px] bg-[#1e2023] flex items-center justify-between px-4 border-b border-[#41474e]">
+    <div class="flex items-center gap-4"><span class="font-black text-[#9ccbf7] text-lg tracking-tight">IRONSIGHT SENTINEL</span></div>
+    <div class="flex items-center gap-6 text-xs text-[#c1c7cf]">
+        <span>ROBOT: <b id="nav-robot-id" class="text-white">ROBOT-01</b></span>
+        <span>CHAINAGE: <b id="nav-chainage" class="text-[#9ccbf7]">12+435</b></span>
+        <span>TEMP: <b id="nav-temp" class="text-white">42.1°C</b></span>
+        <div class="bg-[#9ccbf7]/10 border border-[#9ccbf7] text-[#9ccbf7] px-2 py-0.5 rounded text-xs">SYSTEM ACTIVE</div>
+    </div>
+</nav>
+<main class="flex-1 flex p-4 gap-4 overflow-hidden">
+    <section class="flex-1 bg-[#0c0e11] border border-[#41474e] rounded p-4 flex flex-col justify-between relative">
+        <div>
+            <div class="text-xs text-[#c1c7cf]">CURRENT TRACK SEGMENT</div>
+            <h2 class="text-lg font-bold text-white">LINE ALPHA / SECT-04 / 12+000 - 13+000</h2>
+        </div>
+        <div class="h-24 bg-[#1a1c1f] border border-[#41474e] rounded relative flex items-center px-6">
+            <div class="w-full h-1 bg-[#41474e]"></div>
+            <div class="absolute left-[65%] -translate-x-1/2 flex flex-col items-center">
+                <div class="bg-[#2a5c82] text-[10px] px-2 py-0.5 rounded text-[#9ccbf7] border border-[#9ccbf7] mb-1">ROBOT-01</div>
+                <div class="w-4 h-4 bg-[#9ccbf7] rounded-full animate-ping"></div>
+            </div>
+        </div>
+        <div class="text-xs text-[#9ccbf7]">LIVE SSE TELEMETRY STREAM ACTIVE</div>
+    </section>
+    <section class="w-[380px] bg-[#111316] border border-[#41474e] rounded p-4 flex flex-col">
+        <h3 class="text-xs font-bold text-[#ff3b30] mb-2 uppercase">⚠ Critical Defect Alert</h3>
+        <h2 class="text-sm font-bold mb-3">Defect Analysis: CR-042</h2>
+        <div class="h-44 bg-[#333538] border border-[#41474e] rounded mb-3 overflow-hidden">
+            <img class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC1yLsVl6DWRBOKfhLDJO5lcQOLUtM7fjEdHyBrbKWx17kbUIqeZafQDd1bLRBPxrmi-EEsFI1614XKfOd0bU9ixbcdYl81Cc470XB1tkjAtxrGSPQh9oexlTV9qlRv8cP232niv4xzY0shIgppiA-tinDV99x_20BrGZ6Ag7AbSBFZVctMJPLewhmK4xnFvYj8OvaOvpsYG_WKQR5NWbYIBVCNIRawQTx-0ascghvRkQC5cXiatVy0"/>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-xs mb-3">
+            <div class="bg-[#1e2023] p-2 rounded"><span>TYPE:</span> <b class="block text-white truncate">TRANSVERSE_CRACK</b></div>
+            <div class="bg-[#1e2023] p-2 rounded"><span>SEVERITY:</span> <b class="block text-[#ff3b30]">CRITICAL</b></div>
+        </div>
+        <button onclick="alert('Repair Team Dispatched!')" class="mt-auto w-full py-2 bg-[#2a5c82] hover:bg-[#9ccbf7] hover:text-[#003351] text-[#9ccbf7] font-bold text-xs rounded border border-[#9ccbf7] transition-colors">
+            DISPATCH REPAIR CREW
+        </button>
+    </section>
+</main>
+<script>
+    fetch('/api/v1/telemetry').then(r => r.json()).then(t => {
+        document.getElementById('nav-robot-id').innerText = t.robot_id || 'ROBOT-01';
+        document.getElementById('nav-chainage').innerText = t.chainage || '12+435';
+        document.getElementById('nav-temp').innerText = (t.sys_temp_c || 42.1) + '°C';
+    });
+    try {
+        const es = new EventSource('/api/v1/inspection-events');
+        es.onmessage = (e) => {
+            const data = JSON.parse(e.data);
+            if (data.event_type === 'robot.position.updated') {
+                document.getElementById('nav-chainage').innerText = data.data.chainage || '12+435';
+            }
+        };
+    } catch (e) {}
+</script>
 </body>
 </html>"""
 
